@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" href="data:,">
+    <title>AI Studio</title>
+</head>
+
+<body>
+
+    <!-- MOBILE NAV -->
+    <div class="mobile-nav">
+        <button id="menu-btn">☰ Chats</button>
+        <h2>AI Studio</h2>
+        <button id="panel-btn">⚙ Tools</button>
+    </div>
+
+    <div class="app-container">
+
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+
+            <button id="new-chat-btn" class="agent-btn new-chat">
+                New Chat
+            </button>
+
+            <h3>Chats</h3>
+            <ul id="chat-list"></ul>
+
+        </aside>
+
+        <!-- MAIN CHAT -->
+        <main class="chat-main">
+
+            <div id="chat-window"></div>
+
+            <div class="input-area">
+
+                <div class="input-row">
+
+                    <select id="model-select"></select>
+
+                    <input
+                        type="text"
+                        id="user-input"
+                        placeholder="Message AI..."
+                    >
+
+                    <div class="toolbox" id="toolbox"></div>
+
+                    <button id="send-btn">
+                        Send
+                    </button>
+
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- RIGHT PANEL -->
+        <aside class="control-panel" id="control-panel">
+
+            <h3>Agents</h3>
+
+            <button class="agent-btn" id="research-btn">
+                Research Agent
+            </button>
+
+            <button class="agent-btn" id="code-btn">
+                Code Agent
+            </button>
+
+            <hr>
+
+            <h3>RAG Loader</h3>
+
+            <input type="file" id="file-loader">
+
+            <div id="file-list"></div>
+
+        </aside>
+
+    </div>
+
+    <script type="module" src="/static/js/app.js"></script>
+
+</body>
+</html>
