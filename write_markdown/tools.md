@@ -5,3 +5,45 @@
 > READ by `read_markdown/markdown_loader.py` → regenerates `config/tools.json`.
 
 ## tools
+
+### create_folder
+- name: Create Folder
+- icon: 📁
+- enabled: true
+- description: Creates a directory at the specified path.
+
+### create_file
+- name: Create File
+- icon: ✍️
+- enabled: true
+- description: Creates a new file with optional initial content.
+
+### setup_venv
+- name: Setup Venv
+- icon: 🐍
+- enabled: true
+- description: Creates a Python virtual environment (.venv).
+
+### read_file
+- name: Read File
+- icon: 📖
+- enabled: true
+- description: Reads and returns the contents of a text file.
+
+### write_file
+- name: Write File
+- icon: ✍️
+- enabled: true
+- description: Writes or overwrites text content to a file.
+
+### read_pdf
+- name: Read Pdf
+- icon: 📕
+- enabled: true
+- description: Extracts text contents from a PDF file.
+
+### tell_me_the_date_and_time
+- name: Tell Me The Date And Time
+- icon: 🕒
+- enabled: true
+- description: Returns the current date and time.

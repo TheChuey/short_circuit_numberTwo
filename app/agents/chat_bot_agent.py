@@ -10,7 +10,7 @@ This module's job is to turn the generated config files into a usable Agent:
     config/agent.json   -> the agent's name, system prompt, skills (per-agent list)
     app/tools/tools.py  -> SKILL_REGISTRY: the master catalog of tool functions
 
-    build_agent(model)  -> Agent(LLMClient(model), tools, AgentProfile(...))
+    build_agent(model)  -> Agent(model, tools, AgentProfile(...))
 
 Tools resolution (one line):
     agent.json's 'skills' list says WHICH registered tools this agent gets.
@@ -49,12 +49,9 @@ if str(BACKEND_DIR) not in sys.path:
 # --------------------------------------------------------------------------
 # IMPORTS
 # --------------------------------------------------------------------------
-# The Agent engine (LLMClient, Agent, AgentProfile) comes from the single
-# source of truth for all classes: build/class_definition.py. The shared LLM
-# backend (ask_llm) comes from the composition root, build/composition.py,
-# and is injected into LLMClient.
-from build.class_definition import Agent, AgentProfile, LLMClient
-from build.composition import ask_llm
+# The Agent engine (Agent, AgentProfile) comes from the single
+# source of truth for all classes: build/class_definition.py.
+from build.class_definition import Agent, AgentProfile
 
 # The skill-name -> function registry lives in the master tools module
 # (app/tools/tools.py). To add a new skill: define the function there,
@@ -73,12 +70,6 @@ AGENT_FILE = CONFIG_DIR / "chat_bot.json"      # This line of code will give the
 SKILLS_FILE = CONFIG_DIR / "skills.json"    # {"skills": [{id, name, function}]} - generated
 # catalog from SKILL_REGISTRY (kept as a test point; build_agent() does NOT
 # read it at runtime - tools resolve straight from SKILL_REGISTRY).
-
-# Safety budget for the flattened prompt we SEND (system prompt + history).
-# The frontend keeps the FULL history locally; here we only trim what is sent
-# so the prompt stays inside the model's context window (num_ctx in ask_llm).
-# ~4 chars/token -> 40000 chars is roughly 10k tokens, well under the cap.
-MAX_PROMPT_CHARS = 40000
 
 
 # --------------------------------------------------------------------------
@@ -111,10 +102,9 @@ def build_agent(model: str | None = None) -> Agent:
     #    registered tools this agent gets (ids == registry keys).
     tools = [SKILL_REGISTRY[sid] for sid in config.get("skills", []) if sid in SKILL_REGISTRY]
 
-    # 4. Assemble the Agent with its LLM backend, tools and character. The
-    #    LLM backend (ask_llm) is injected so LLMClient stays dependency-free.
+    # 4. Assemble the Agent with its model, tools and character.
     agent = Agent(
-        llm=LLMClient(model=model_name, backend=ask_llm),
+        model=model_name,
         tools=tools,
         profile=profile,
     )
@@ -132,24 +122,13 @@ def build_agent(model: str | None = None) -> Agent:
 def run_agent(message: str, history: list[dict] | None = None, model: str | None = None) -> str:
     agent = build_agent(model=model)  # Fresh agent (stateless server - no shared memory).
 
-    # Rewind the stored conversation into the loop, newest first, keeping only
-    # what fits the prompt budget. The frontend keeps the FULL history - we just
-    # avoid sending a prompt that exceeds the model's context window (which
-    # would make Ollama truncate it, lose the older turns, and return empty).
-    # The system prompt always stays: think() injects it from the profile.
-    budget = MAX_PROMPT_CHARS
-    used = len(agent.profile.system_prompt)
-    recent = []
-    for m in reversed(history or []):
+    # Rewind the stored conversation into the loop, keeping only non-empty content
+    for m in (history or []):
         role = "assistant" if m.get("role") == "ai" else m.get("role", "user")
         content = m.get("content", "")
         if not content:  # drop empty bubbles so they don't pollute the prompt
             continue
-        if used + len(content) > budget:  # older turns don't fit - drop them
-            break
-        used += len(content)
-        recent.append({"role": role, "content": content})
-    agent.messages.extend(reversed(recent))
+        agent.messages.append({"role": role, "content": content})
 
     return agent.think(message)  # think() appends this new user turn, asks the LLM, returns the reply.
 
@@ -163,4 +142,5 @@ if __name__ == "__main__":
     demo = build_agent()
     print(f"Built agent: '{demo.profile.name}'")
     print(f"  tools: {list(demo.tools.keys())}")
-    print(f"  model: {demo.llm.model}")
+    print(f"  model: {demo.model}")
+

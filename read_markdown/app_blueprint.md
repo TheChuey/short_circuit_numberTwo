@@ -38,7 +38,7 @@ Everything the chatbot needs at the top level.
 
 - name: AI Agent Development Assistant
 - default_model: gemma4:e2b
-- skills: get_current_date
+- skills: get_current_date, tell_me_the_date_and_time, create_folder, create_file, setup_venv, read_file, write_file, read_pdf
 
 ## role
 

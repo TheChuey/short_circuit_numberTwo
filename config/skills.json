@@ -1,3 +1,46 @@
 {
-  "skills": []
+  "skills": [
+    {
+      "id": "create_folder",
+      "name": "Create Folder",
+      "function": "create_folder",
+      "description": "Creates a directory at the specified path."
+    },
+    {
+      "id": "create_file",
+      "name": "Create File",
+      "function": "create_file",
+      "description": "Creates a new file with optional initial content."
+    },
+    {
+      "id": "setup_venv",
+      "name": "Setup Venv",
+      "function": "setup_venv",
+      "description": "Creates a Python virtual environment (.venv)."
+    },
+    {
+      "id": "read_file",
+      "name": "Read File",
+      "function": "read_file",
+      "description": "Reads and returns the contents of a text file."
+    },
+    {
+      "id": "write_file",
+      "name": "Write File",
+      "function": "write_file",
+      "description": "Writes or overwrites text content to a file."
+    },
+    {
+      "id": "read_pdf",
+      "name": "Read Pdf",
+      "function": "read_pdf",
+      "description": "Extracts text contents from a PDF file."
+    },
+    {
+      "id": "tell_me_the_date_and_time",
+      "name": "Tell Me The Date And Time",
+      "function": "tell_me_the_date_and_time",
+      "description": "Returns the current date and time."
+    }
+  ]
 }

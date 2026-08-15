@@ -178,10 +178,18 @@ class AppConfig:
             "",
         ]
         for tool_id, doc in self.list_registered_tools().items():
+            icon = "🔧"
+            if "folder" in tool_id: icon = "📁"
+            elif "pdf" in tool_id: icon = "📕"
+            elif "venv" in tool_id: icon = "🐍"
+            elif "read" in tool_id: icon = "📖"
+            elif "write" in tool_id or "create" in tool_id: icon = "✍️"
+            elif "date" in tool_id or "time" in tool_id: icon = "🕒"
+
             lines += [
                 f"### {tool_id}",
                 f"- name: {tool_id.replace('_', ' ').title()}",
-                "- icon: 🔧",
+                f"- icon: {icon}",
                 "- enabled: true",
             ]
             if doc:
