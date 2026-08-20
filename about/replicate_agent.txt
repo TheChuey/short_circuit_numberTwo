@@ -1,0 +1,265 @@
+HOW TO CREATE A NEW AGENT IN SHORT_CIRCUIT_2
+=============================================
+
+This file contains everything needed to replicate the process of creating
+a new agent in this project. Any AI can read this file and follow the
+steps to create a new agent from scratch.
+
+
+STEP 1: CREATE THE MARKDOWN DEFINITION FILE
+--------------------------------------------
+
+Create a new file in read_markdown/ named after your agent:
+
+    read_markdown/{agent_name}.md
+
+The file MUST follow this exact structure:
+
+    # {Agent Name}
+
+    ## identity
+
+    - name: {Display Name}
+    - default_model: {model id or leave blank}
+    - type: {Chatbot, Basic, Research, etc.}
+
+    ## skills
+
+    | Skill | Description | Docs |
+    |---|---|---|
+    | {skill_id} | {description} | [details](skills/{skill_id}.md) |
+
+    (Write "(none)" if no skills)
+
+    ## role
+
+    {Who the agent is. What it does. In 2-5 sentences.}
+
+    ## purpose
+
+    {One sentence describing the agent's main goal.}
+
+    ## personality
+
+    {How the agent behaves. Adjectives and traits.}
+
+    ## communication
+
+    - {Rule 1}
+    - {Rule 2}
+    - {Rule 3}
+
+    ## boundaries
+
+    - {What the agent will not do}
+    - {What the agent will not claim}
+
+    ## principles
+
+    - {Core principle 1}
+    - {Core principle 2}
+
+    ## decision_style
+
+    - {How the agent makes decisions}
+
+    ## priorities
+
+    1. {Priority 1}
+    2. {Priority 2}
+    3. {Priority 3}
+
+
+SECTION RULES:
+- The ## identity section uses "- key: value" bullet format.
+- The ## skills section uses a markdown table with Skill, Description, Docs columns.
+- All other sections use plain text or bullet lists.
+- The ## priorities section is documentation only (not included in the system prompt).
+- All other sections ARE included in the system prompt.
+
+
+STEP 2: ADD THE LOADER TO markdown_loader.py
+---------------------------------------------
+
+Open read_markdown/markdown_loader.py and add:
+
+1. A path constant near the other path constants:
+
+    # Your agent definition -> {agent_name}.json
+    {AGENT_NAME}_DEF_FILE = Path(__file__).resolve().parent / "{agent_name}.md"
+    {AGENT_NAME}_FILE = CONFIG_DIR / "{agent_name}.json"
+
+2. A loader instance near the other loaders:
+
+    {AGENT_NAME}_LOADER = MarkdownLoader(
+        blueprint_path={AGENT_NAME}_DEF_FILE,
+        output_paths={"agent": {AGENT_NAME}_FILE},
+    )
+
+3. A try/except block inside load_all():
+
+    try:
+        result.update({AGENT_NAME}_LOADER.load(kinds=["agent"]))
+    except FileNotFoundError as e:
+        print(f"[markdown_loader] {e} - no {agent_name} available")
+
+
+STEP 3: CREATE THE AGENT MODULE
+--------------------------------
+
+Create a new file in app/agents/:
+
+    app/agents/{agent_name}.py
+
+Copy this template and modify:
+
+    """
+    app/agents/{agent_name}.py
+    ==========================
+
+    Builds the {agent_name} agent from config/{agent_name}.json.
+    """
+
+    import json
+    import sys
+    from pathlib import Path
+
+    BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+    if str(BACKEND_DIR) not in sys.path:
+        sys.path.insert(0, str(BACKEND_DIR))
+
+    from build.class_definition import Agent
+    from app.agents.class_library import AgentProfile, PromptManager
+
+    CONFIG_DIR = Path(__file__).resolve().parent.parent.parent / "config"
+    AGENT_FILE = CONFIG_DIR / "{agent_name}.json"
+
+
+    def build_{agent_name}(model=None, adjustments=None):
+        """Build an Agent from config/{agent_name}.json."""
+        try:
+            config = json.loads(AGENT_FILE.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            config = {}
+
+        if not config.get("name"):
+            config = {"name": "{Agent Name}", "role": "{fallback role}"}
+
+        profile = PromptManager.build(config, adjustments)
+        tools = [SKILL_REGISTRY[sid] for sid in config.get("skills", []) if sid in SKILL_REGISTRY]
+        return Agent(model or config.get("default_model"), tools, profile)
+
+
+    if __name__ == "__main__":
+        demo = build_{agent_name}()
+        print(f"Built agent: '{demo.profile.name}'")
+        print(f"  tools: {list(demo.tools.keys())}")
+        print(f"  model: {demo.model}")
+        print(f"  system_prompt length: {len(demo.profile.system_prompt)} chars")
+
+If the agent has no tools, remove the SKILL_REGISTRY import and the tools line.
+
+
+STEP 4: UPDATE agents_index.md
+-------------------------------
+
+Add a row to the agents table in read_markdown/agents_index.md:
+
+    | {Display Name} | [{agent_name}.md]({agent_name}.md) | {Type} | {model or "(none)"} | {purpose} |
+
+
+STEP 5: VERIFY
+---------------
+
+Run these commands:
+
+1. Regenerate configs:
+   python read_markdown/markdown_loader.py
+
+   Verify: {agent_name}.json appears in config/
+
+2. Test the agent module:
+   python app/agents/{agent_name}.py
+
+   Verify: prints agent name, tools, model, system_prompt length
+
+3. Test the full agent:
+   python app/agents/chat_bot_agent.py
+
+   Verify: builds the full agent (or falls back to basic if chat_bot.json is missing)
+
+
+STEP 6: (OPTIONAL) ADD NEW SKILLS
+-----------------------------------
+
+If your agent needs new skills:
+
+1. Create the skill function in app/tools/tools.py:
+   def {skill_id}(param1: str, param2: str) -> str:
+       """Description of what the skill does."""
+       return "result"
+
+2. Register it in SKILL_REGISTRY:
+   SKILL_REGISTRY["{skill_id}"] = {skill_id}
+
+3. Create detailed docs in read_markdown/skills/{skill_id}.md
+
+4. Add a row to the ## skills table in your agent's markdown file:
+
+   | {skill_id} | {description} | [details](skills/{skill_id}.md) |
+
+
+FILE REFERENCE
+--------------
+
+Files you will touch:
+    read_markdown/{agent_name}.md           — your agent's definition
+    read_markdown/markdown_loader.py        — add a loader
+    read_markdown/agents_index.md           — add to the index
+    app/agents/{agent_name}.py              — your agent's module
+    config/{agent_name}.json                — auto-generated, do not edit
+
+Files that exist and are reused:
+    app/agents/class_library.py             — AgentProfile, PromptBuilder, PromptManager
+    build/class_definition.py               — Agent, ask_llm
+    app/tools/tools.py                      — SKILL_REGISTRY (only if you have tools)
+
+Files that are auto-generated:
+    config/{agent_name}.json                — from your markdown, regenerated on server start
+
+
+DATA FLOW
+---------
+
+    {agent_name}.md
+        |
+        v
+    markdown_loader.py
+        |
+        v
+    config/{agent_name}.json
+        |
+        v
+    PromptManager.build(config)
+        |
+        v
+    AgentProfile (with composed system_prompt)
+        |
+        v
+    Agent(model, tools, profile)
+
+
+TROUBLESHOOTING
+----------------
+
+Problem: "No model available" error
+Solution: Add a model to config/models.json or install one in Ollama.
+
+Problem: Agent has no tools
+Solution: Check the ## skills table in your markdown. Verify skill IDs match SKILL_REGISTRY keys.
+
+Problem: System prompt is empty
+Solution: Check that your markdown has ## role, ## purpose, etc. sections with content.
+
+Problem: Config not regenerated
+Solution: Restart the server. The pipeline runs on startup via the lifespan event.

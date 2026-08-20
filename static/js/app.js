@@ -4,6 +4,7 @@
 
 import {
     loadModels,
+    loadAgent,
     loadTools,
     sendMessage
 } from "./api.js";
@@ -18,7 +19,8 @@ const state = {
     tool: "none",
     chat: [],
     chats: [],
-    activeChatId: null
+    activeChatId: null,
+    agentAvailable: false
 };
 
 // =============================
@@ -43,6 +45,7 @@ async function init() {
     console.log("[APP] START");
 
     await restoreChats();
+    await setupAgent();
     await setupModels();
     await setupTools();
 
@@ -50,6 +53,16 @@ async function init() {
     setupEvents();
 
     console.log("[APP] READY");
+}
+
+
+// =============================
+// AGENT AVAILABILITY
+// =============================
+async function setupAgent() {
+    const data = await loadAgent();
+    state.agentAvailable = data.available === true;
+    console.log("[AGENT]", state.agentAvailable ? "available" : "not available");
 }
 
 
@@ -497,6 +510,14 @@ async function setupTools() {
     if (!box) return;
 
     box.innerHTML = "";
+
+    if (!state.agentAvailable) {
+        box.style.display = "none";
+        console.log("[TOOLS] Agent not available - toolbox hidden");
+        return;
+    }
+
+    box.style.display = "";
     data.tools.forEach(t => {
         const btn = document.createElement("button");
         btn.className = "tool-icon-btn";

@@ -1,46 +1,194 @@
 {
   "skills": [
     {
-      "id": "create_folder",
-      "name": "Create Folder",
-      "function": "create_folder",
-      "description": "Creates a directory at the specified path."
-    },
-    {
       "id": "create_file",
-      "name": "Create File",
+      "name": "create_file",
       "function": "create_file",
-      "description": "Creates a new file with optional initial content."
+      "purpose": "Creates a new file with optional initial content.",
+      "when_to_use": [
+        "Creating new source files during project scaffolding",
+        "Writing configuration files (e.g., `.env`, `config.json`)",
+        "Generating output files from templates",
+        "Creating empty placeholder files"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "required": true,
+          "description": "Full path to the file to create. Parent directories are created automatically if they don't exist."
+        },
+        {
+          "name": "content",
+          "type": "string",
+          "required": false,
+          "description": "Initial content to write to the file. Defaults to empty string."
+        }
+      ],
+      "example": "```\ncreate_file(\"src/main.py\", \"print('Hello, World!')\")\n```\n\nCreates `src/main.py` with the content `print('Hello, World!')`.",
+      "returns": "",
+      "requirements": "",
+      "related_skills": []
     },
     {
-      "id": "setup_venv",
-      "name": "Setup Venv",
-      "function": "setup_venv",
-      "description": "Creates a Python virtual environment (.venv)."
+      "id": "create_folder",
+      "name": "create_folder",
+      "function": "create_folder",
+      "purpose": "Creates a directory at the specified path.",
+      "when_to_use": [
+        "Setting up project directory structures",
+        "Creating output directories before writing files",
+        "Organizing files into folders",
+        "Creating nested directory structures"
+      ],
+      "parameters": [
+        {
+          "name": "folder_path",
+          "type": "string",
+          "required": true,
+          "description": "Full path of the directory to create. Parent directories are created automatically if they don't exist."
+        }
+      ],
+      "example": "```\ncreate_folder(\"src/components\")\n```\n\nCreates `src/components/` directory (and `src/` if it doesn't exist).",
+      "returns": "- Success message with the created path",
+      "requirements": "",
+      "related_skills": []
+    },
+    {
+      "id": "get_current_date",
+      "name": "get_current_date",
+      "function": "get_current_date",
+      "purpose": "Returns the real current date as a formatted string.",
+      "when_to_use": [
+        "When the user asks \"what day is it?\"",
+        "When timestamping files or logs",
+        "When the agent needs to know the current date for calculations",
+        "When generating date-based content"
+      ],
+      "parameters": [],
+      "example": "```\nget_current_date()\n```\n\nReturns something like: `Wednesday, August 19, 2026`",
+      "returns": "- A formatted date string",
+      "requirements": "",
+      "related_skills": []
     },
     {
       "id": "read_file",
-      "name": "Read File",
+      "name": "read_file",
       "function": "read_file",
-      "description": "Reads and returns the contents of a text file."
-    },
-    {
-      "id": "write_file",
-      "name": "Write File",
-      "function": "write_file",
-      "description": "Writes or overwrites text content to a file."
+      "purpose": "Reads and returns the contents of a text file.",
+      "when_to_use": [
+        "Inspecting the contents of a source file",
+        "Reading configuration files",
+        "Checking if a file exists and what it contains",
+        "Loading template files"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "required": true,
+          "description": "Full path to the file to read."
+        }
+      ],
+      "example": "```\nread_file(\"src/main.py\")\n```\n\nReturns the full text content of `src/main.py`.",
+      "returns": "- The file's text content as a string\n- An error message if the file does not exist",
+      "requirements": "",
+      "related_skills": []
     },
     {
       "id": "read_pdf",
-      "name": "Read Pdf",
+      "name": "read_pdf",
       "function": "read_pdf",
-      "description": "Extracts text contents from a PDF file."
+      "purpose": "Extracts text contents from a PDF file.",
+      "when_to_use": [
+        "Reading text from PDF documents",
+        "Extracting content from research papers",
+        "Processing PDF reports or manuals",
+        "Analyzing PDF-based documentation"
+      ],
+      "parameters": [
+        {
+          "name": "pdf_path",
+          "type": "string",
+          "required": true,
+          "description": "Full path to the PDF file to read."
+        }
+      ],
+      "example": "```\nread_pdf(\"documents/report.pdf\")\n```\n\nReturns the extracted text content from all pages of the PDF.",
+      "returns": "- The extracted text content as a string\n- An error message if `pypdf` is not installed or the file doesn't exist",
+      "requirements": "- The `pypdf` library must be installed (`pip install pypdf`)",
+      "related_skills": []
+    },
+    {
+      "id": "setup_venv",
+      "name": "setup_venv",
+      "function": "setup_venv",
+      "purpose": "Creates a Python virtual environment (.venv).",
+      "when_to_use": [
+        "Setting up a new Python project",
+        "Isolating project dependencies",
+        "Creating a clean Python environment for testing",
+        "Preparing a project before installing packages"
+      ],
+      "parameters": [
+        {
+          "name": "env_dir",
+          "type": "string",
+          "required": false,
+          "description": "Path where the virtual environment will be created. Defaults to `.venv` in the current directory."
+        }
+      ],
+      "example": "```\nsetup_venv(\".venv\")\n```\n\nCreates a `.venv/` directory with Python's virtual environment inside.",
+      "returns": "- Success message with the path to the created environment",
+      "requirements": "",
+      "related_skills": []
     },
     {
       "id": "tell_me_the_date_and_time",
-      "name": "Tell Me The Date And Time",
+      "name": "tell_me_the_date_and_time",
       "function": "tell_me_the_date_and_time",
-      "description": "Returns the current date and time."
+      "purpose": "Returns the current date and time.",
+      "when_to_use": [
+        "When the user asks \"what time is it?\"",
+        "When timestamping operations",
+        "When the agent needs both date and time together",
+        "When logging events with timestamps"
+      ],
+      "parameters": [],
+      "example": "```\ntell_me_the_date_and_time()\n```\n\nReturns something like: `The current date and time is 2026-08-19 18:30:00`",
+      "returns": "- A string with the current date and time",
+      "requirements": "",
+      "related_skills": []
+    },
+    {
+      "id": "write_file",
+      "name": "write_file",
+      "function": "write_file",
+      "purpose": "Writes or overwrites text content to a file.",
+      "when_to_use": [
+        "Updating existing file contents",
+        "Overwriting configuration files with new values",
+        "Saving generated output to a file",
+        "Replacing entire file contents"
+      ],
+      "parameters": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "required": true,
+          "description": "Full path to the file to write."
+        },
+        {
+          "name": "content",
+          "type": "string",
+          "required": true,
+          "description": "The content to write to the file."
+        }
+      ],
+      "example": "```\nwrite_file(\"config/settings.json\", '{\"theme\": \"dark\"}')\n```\n\nWrites `{\"theme\": \"dark\"}` to `config/settings.json`, overwriting any existing content.",
+      "returns": "",
+      "requirements": "",
+      "related_skills": []
     }
   ]
 }

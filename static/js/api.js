@@ -25,6 +25,11 @@ export async function loadModels() {
     return await res.json();
 }
 
+export async function loadAgent() {
+    const res = await fetchWithTimeout(`${API_BASE}/agent`);
+    return await res.json();
+}
+
 export async function loadTools() {
     const res = await fetchWithTimeout(`${API_BASE}/tools`);
     return await res.json();

@@ -10,14 +10,15 @@ import os
 
 # App modules:
 #   write_markdown.app_config.AppConfig -> scans LLMs into config/models.json and
-#                                          regenerates config/skills.json +
-#                                          write_markdown/tools.md from
+#                                          regenerates write_markdown/tools.md from
 #                                          app/tools/tools.py's SKILL_REGISTRY
-#   read_markdown.markdown_loader.load_all -> reads read_markdown/app_blueprint.md +
+#   read_markdown.markdown_loader.load_all -> reads read_markdown/chat_bot_agent.md +
+#                                          read_markdown/skills/*.md +
 #                                          write_markdown/tools.md at startup and
-#                                          regenerates config/agent.json + config/tools.json
+#                                          regenerates config/chat_bot.json +
+#                                          config/skills.json + config/tools.json
 #   app.agents.chat_bot_agent.run_agent -> builds a fresh Agent from
-#                                          config/agent.json + SKILL_REGISTRY,
+#                                          config/chat_bot.json + SKILL_REGISTRY,
 #                                          replays chat history, and returns the
 #                                          LLM reply for /api/chat
 from contextlib import asynccontextmanager
@@ -33,9 +34,9 @@ app_config = AppConfig()
 
 # Startup hook: regenerate the dynamic configs BEFORE any request is served,
 # so edits always take effect on restart.
-# Order matters: refresh_all() writes skills.json + tools.md from the
-# SKILL_REGISTRY, and load_all() then turns that tools.md (plus app_blueprint.md)
-# into the JSON files (agent.json / tools.json).
+# Order matters: refresh_all() writes tools.md from the SKILL_REGISTRY,
+# and load_all() then turns that tools.md plus chat_bot_agent.md and
+# skills/*.md into the JSON files (chat_bot.json / tools.json / skills.json).
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app_config.refresh_all()   # scan LLMs -> models.json; registry -> skills.json + tools.md
@@ -85,6 +86,9 @@ MODELS_FILE = BASE_DIR / "config" / "models.json"
 # from write_markdown/tools.md (the ## tools section) at every server start.
 TOOLS_FILE = BASE_DIR / "config" / "tools.json"
 
+# The agent definition comes from chat_bot.json, generated from chat_bot_agent.md.
+AGENT_FILE = BASE_DIR / "config" / "chat_bot.json"
+
 @app.get("/api/models")
 async def get_models():
     # Look for the models.json file next to server.py.
@@ -106,6 +110,24 @@ async def get_models():
 
     print("json file sent: models")
     return {"models": models}
+
+@app.get("/api/agent")
+async def get_agent():
+    """Return whether a full agent is available.
+
+    The frontend checks this on page load to decide whether to show
+    agent features (tool buttons, agent-specific UI) or fall back to
+    a basic chatbot (no tools, no agent personality).
+    """
+    if not AGENT_FILE.exists():
+        return {"available": False}
+    try:
+        data = json.loads(AGENT_FILE.read_text(encoding="utf-8"))
+        if data.get("name"):
+            return {"available": True, "name": data["name"], "type": data.get("type", "")}
+        return {"available": False}
+    except (OSError, json.JSONDecodeError):
+        return {"available": False}
 
 @app.get("/api/tools")
 async def get_tools():
