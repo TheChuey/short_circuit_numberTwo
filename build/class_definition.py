@@ -12,6 +12,7 @@ AgentProfile lives in app/agents/class_library.py.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Callable, List
 
@@ -38,6 +39,47 @@ class Agent:
         self.tools = {f.__name__: f for f in tools}
         self.messages: List[dict] = []
 
+    def _extract_text_tool_calls(self, content: str) -> List[dict]:
+        """Find tool calls that a model wrote as plain-text JSON instead of using
+        Ollama's native tool_calls field (a common quirk of small local models).
+
+        Accepts bare JSON, ```json fenced blocks, or a JSON object embedded in
+        prose. ONLY names present in self.tools are returned, so ordinary replies
+        that happen to contain JSON are never executed.
+        """
+        text = (content or "").strip()
+        if text.startswith("```"):  # unwrap markdown code fences
+            text = text.strip("`")
+            if text.lower().startswith("json"):
+                text = text[4:]
+            text = text.strip()
+
+        candidates: List[dict] = []
+        try:
+            candidates.append(json.loads(text))
+        except (json.JSONDecodeError, TypeError):
+            # one nesting level allowed so nested "arguments" objects are captured
+            for match in re.finditer(r"\{(?:[^{}]|\{[^{}]*\})*\}", content or ""):
+                try:
+                    candidates.append(json.loads(match.group(0)))
+                except json.JSONDecodeError:
+                    continue
+
+        calls: List[dict] = []
+        for item in candidates:
+            if not isinstance(item, dict) or item.get("name") not in self.tools:
+                continue
+            args = item.get("arguments", {}) or {}
+            if isinstance(args, str):  # some models send arguments as a JSON string
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    args = {}
+            if not isinstance(args, dict):
+                args = {}
+            calls.append({"function": {"name": item["name"], "arguments": args}})
+        return calls
+
     def think(self, user_input: str) -> str:
         """Add user input to history, send the conversation to the LLM, and return its reply."""
         if not self.messages or self.messages[0].get("role") != "system":
@@ -50,9 +92,13 @@ class Agent:
         message = ask_llm(messages=self.messages, model=self.model, tools=tool_callables)
         self.messages.append(message)
 
-        if message.get("tool_calls"):
-            print(f"[Agent.think] LLM requested {len(message['tool_calls'])} tool calls.")
-            for tool_call in message["tool_calls"]:
+        # Native tool_calls, or calls the model wrote as plain-text JSON.
+        # Both paths flow through act()/observe() and a follow-up LLM round.
+        tool_calls = message.get("tool_calls") or self._extract_text_tool_calls(message.get("content", ""))
+        if tool_calls:
+            origin = "native tool_calls" if message.get("tool_calls") else "TEXT reply"
+            print(f"[Agent.think] Executing {len(tool_calls)} tool call(s) from {origin}.")
+            for tool_call in tool_calls:
                 result = self.act(tool_call)
                 self.observe(tool_call["function"]["name"], result)
 

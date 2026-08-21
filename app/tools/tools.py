@@ -67,6 +67,10 @@ def tell_me_the_date_and_time() -> str:
     now = datetime.now()
     return f"The current date and time is {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
+def get_current_date() -> str:
+    """Returns the real current date as a formatted string."""
+    return datetime.now().strftime("%A, %B %d, %Y")
+
 
 # SKILL_REGISTRY exposes our available tools to the agents.
 # To add a tool, define the function above and add it here.
@@ -77,5 +81,6 @@ SKILL_REGISTRY = {
     "read_file": read_file,
     "write_file": write_file,
     "read_pdf": read_pdf,
+    "get_current_date": get_current_date,
     "tell_me_the_date_and_time": tell_me_the_date_and_time
 }

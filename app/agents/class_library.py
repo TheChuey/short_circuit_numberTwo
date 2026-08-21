@@ -55,24 +55,32 @@ class AgentProfile:
     # Documentation only (NOT in the system prompt)
     priorities: str = ""
 
+    # Any additional '## sections' from the blueprint markdown, keyed by
+    # section title. Each non-empty entry becomes an UPPERCASE-titled block
+    # in the system prompt, so new sections need no code changes.
+    extras: dict = field(default_factory=dict)
+
     @classmethod
     def from_dict(cls, config: dict) -> "AgentProfile":
         """Create an AgentProfile from a configuration dict.
 
-        Maps JSON keys to dataclass fields. Unknown keys are ignored.
+        Maps JSON keys to dataclass fields. Every other key is kept in
+        'extras', so generic blueprint sections still reach the prompt.
         """
-        return cls(
-            name=config.get("name", ""),
-            role=config.get("role", ""),
-            purpose=config.get("purpose", ""),
-            personality=config.get("personality", ""),
-            boundaries=config.get("boundaries", ""),
-            communication=config.get("communication", ""),
-            principles=config.get("principles", ""),
-            decision_style=config.get("decision_style", ""),
-            skills_table=config.get("skills_table", []),
-            priorities=config.get("priorities", ""),
-        )
+        known = {
+            "name": config.get("name", ""),
+            "role": config.get("role", ""),
+            "purpose": config.get("purpose", ""),
+            "personality": config.get("personality", ""),
+            "boundaries": config.get("boundaries", ""),
+            "communication": config.get("communication", ""),
+            "principles": config.get("principles", ""),
+            "decision_style": config.get("decision_style", ""),
+            "skills_table": config.get("skills_table", []),
+            "priorities": config.get("priorities", ""),
+        }
+        extras = {key: value for key, value in config.items() if key not in known and key != "system_prompt"}
+        return cls(**known, extras=extras)
 
 
 # ==========================================================================
@@ -341,8 +349,14 @@ class PromptManager:
             parts.append(f"DECISION STYLE\n{profile.decision_style}")
 
         if profile.skills_table:
-            lines = [f"- {s['id']}: {s['description']}" for s in profile.skills_table]
+            lines = [f"- {skill['id']}: {skill['description']}" for skill in profile.skills_table]
             parts.append("AVAILABLE SKILLS\n" + "\n".join(lines))
+
+        # Generic blueprint sections (user, greeting, project_notes, ...)
+        # become UPPERCASE-titled blocks, sorted for deterministic prompts.
+        for title, content in sorted(profile.extras.items()):
+            if content:
+                parts.append(f"{title.upper()}\n{content}")
 
         return "\n\n".join(parts)
 

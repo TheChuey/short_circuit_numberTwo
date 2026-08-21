@@ -52,6 +52,16 @@ TOOLS_BLUEPRINT_FILE = TOOLS_DIR / "tools.md"
 TOOLS_FILE = CONFIG_DIR / "tools.json"
 
 
+# Sections that get structured handling in build_agent(). Any other '## section'
+# found in an agent blueprint passes through verbatim into the agent JSON (and
+# later into the system prompt via AgentProfile.extras) - no code changes needed
+# to introduce new prompt sections.
+HANDLED_SECTIONS = {
+    "identity", "skills", "role", "purpose", "personality",
+    "communication", "boundaries", "principles", "decision_style", "priorities",
+}
+
+
 class MarkdownLoader:
     """Load one markdown blueprint and regenerate its JSON output file(s).
 
@@ -192,7 +202,7 @@ class MarkdownLoader:
         decision_style = self._clean_body(sections.get("decision_style", ""))
         priorities = self._clean_body(sections.get("priorities", ""))
 
-        return {
+        data = {
             "name": identity.get("name", "Agent"),
             "default_model": identity.get("default_model", ""),
             "type": identity.get("type", ""),
@@ -208,6 +218,13 @@ class MarkdownLoader:
             "priorities": priorities,
             "system_prompt": "",
         }
+        # GENERIC PASSTHROUGH: sections without structured handling (user,
+        # greeting, project_notes, ...) are copied verbatim so they can reach
+        # the system prompt. Never overwrites a structured key.
+        for section_name, body in sections.items():
+            if section_name not in HANDLED_SECTIONS and section_name not in data:
+                data[section_name] = self._clean_body(body)
+        return data
 
     def build_tools(self, sections: dict) -> list:
         """Build the tools list from the 'tools' section ('### <id>' blocks)."""

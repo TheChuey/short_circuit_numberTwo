@@ -23,12 +23,37 @@ from app.tools.tools import SKILL_REGISTRY
 CONFIG_DIR = Path(__file__).resolve().parent.parent.parent / "config"
 AGENT_FILE = CONFIG_DIR / "chat_bot.json"
 
+# PERMISSION CONTROL: restrict which tools the AI may use.
+# None = every skill listed in chat_bot.json is allowed.
+# Example: TOOL_ALLOWLIST = {"read_file", "get_current_date", "tell_me_the_date_and_time"}
+TOOL_ALLOWLIST: set[str] | None = None
+
+
+def _select_tools(config: dict) -> tuple[list, list[str]]:
+    """Apply TOOL_ALLOWLIST and SKILL_REGISTRY checks to the config's skills.
+
+    Returns (tool functions, loaded skill IDs). Blocked and missing skills are
+    reported loudly instead of silently dropped.
+    """
+    loaded_ids: list[str] = []
+    for skill_id in config.get("skills", []):
+        if TOOL_ALLOWLIST is not None and skill_id not in TOOL_ALLOWLIST:
+            print(f"[TOOLS] '{skill_id}' blocked by TOOL_ALLOWLIST - not loaded")
+        elif skill_id in SKILL_REGISTRY:
+            loaded_ids.append(skill_id)
+        else:
+            print(f"[TOOLS] WARNING: skill '{skill_id}' is listed in chat_bot.json but missing from SKILL_REGISTRY - skipped")
+    return [SKILL_REGISTRY[sid] for sid in loaded_ids], loaded_ids
+
 
 def run_agent(message: str, history: list[dict] | None = None, model: str | None = None, adjustments: dict | None = None) -> str:
     """Build a fresh agent, replay history, ask the LLM."""
     config = json.loads(AGENT_FILE.read_text(encoding="utf-8"))
     profile = PromptManager.build(config, adjustments)
-    tools = [SKILL_REGISTRY[sid] for sid in config.get("skills", []) if sid in SKILL_REGISTRY]
+    tools, loaded_ids = _select_tools(config)
+    # Keep the prompt honest: advertise exactly the skills that were loaded,
+    # so the model never tries to call a blocked or missing tool.
+    profile.skills_table = [s for s in profile.skills_table if s.get("id") in loaded_ids]
     chat_bot_agent = Agent(model or config.get("default_model"), tools, profile)
 
     for m in (history or []):
